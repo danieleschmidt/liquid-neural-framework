@@ -4,8 +4,8 @@ from jax import grad, jit, value_and_grad
 import optax
 from typing import Dict, Tuple, Optional, Callable, Any
 import numpy as np
-from ..models.liquid_neural_network import LiquidNeuralNetwork
-from ..models.continuous_time_rnn import ContinuousTimeRNN
+from ..models.liquid_network import LiquidNeuralNetwork
+from ..models.continuous_rnn import ContinuousTimeRNN
 
 
 class LiquidNetworkTrainer:
