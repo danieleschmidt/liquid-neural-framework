@@ -2,10 +2,11 @@ import jax
 import jax.numpy as jnp
 from jax import grad, jit, value_and_grad
 import optax
+import equinox as eqx
 from typing import Dict, Tuple, Optional, Callable, Any
 import numpy as np
-from ..models.liquid_network import LiquidNeuralNetwork
-from ..models.continuous_rnn import ContinuousTimeRNN
+from ..models.liquid_neural_network import LiquidNeuralNetwork
+from ..models.continuous_time_rnn import ContinuousTimeRNN
 
 
 class LiquidNetworkTrainer:
@@ -30,14 +31,12 @@ class LiquidNetworkTrainer:
         
         # Initialize optimizer
         self.optimizer = self._get_optimizer(optimizer_name, learning_rate)
-        self.opt_state = self.optimizer.init(model.params)
+        # Use only differentiable parameters for optimizer state
+        diff_params, _ = eqx.partition(model, eqx.is_array)
+        self.opt_state = self.optimizer.init(diff_params)
         
         # Get loss function
         self.loss_fn = self._get_loss_function(loss_fn)
-        
-        # JIT compile functions for speed
-        self._compiled_loss = jit(self._loss_and_metrics)
-        self._compiled_update = jit(self._update_step)
         
         # Training history
         self.history = {
@@ -106,8 +105,8 @@ class LiquidNetworkTrainer:
         pred_loss = self._mse_loss(predictions, targets)
         
         # Temporal smoothness penalty
-        if predictions.ndim > 1 and predictions.shape[0] > 1:
-            temporal_diff = jnp.diff(predictions, axis=0)
+        if predictions.ndim > 1 and predictions.shape[1] > 1:
+            temporal_diff = jnp.diff(predictions, axis=1)
             smoothness_penalty = jnp.mean(temporal_diff ** 2) * 0.1
             return pred_loss + smoothness_penalty
         
@@ -115,28 +114,29 @@ class LiquidNetworkTrainer:
     
     def _loss_and_metrics(
         self, 
-        params: Dict[str, jnp.ndarray], 
+        diff_params, 
+        static_params,
         inputs: jnp.ndarray, 
-        targets: jnp.ndarray,
-        dt: float = 0.1
+        targets: jnp.ndarray
     ) -> Tuple[jnp.ndarray, Dict[str, jnp.ndarray]]:
-        """Compute loss and metrics."""
-        # Update model params and forward pass
-        self.model.update_params(params)
-        predictions, states = self.model.forward(inputs, dt=dt)
+        """Compute loss and metrics using equinox partitioning approach."""
+        # Reconstruct model from diff and static parts
+        model = eqx.combine(diff_params, static_params)
+        
+        # Forward pass
+        predictions = model(inputs)
         
         # Compute primary loss
         loss = self.loss_fn(predictions, targets)
         
         # Additional regularization
-        # L2 regularization on parameters
-        l2_reg = sum(jnp.sum(p ** 2) for p in params.values() if p.ndim > 0)
+        # L2 regularization on differentiable parameters only
+        array_params = jax.tree.leaves(diff_params)
+        if array_params:
+            l2_reg = sum(jnp.sum(p ** 2) for p in array_params)
+        else:
+            l2_reg = jnp.float32(0.0)
         loss += 1e-5 * l2_reg
-        
-        # Time constant regularization (encourage diversity)
-        if 'tau' in params:
-            tau_diversity = -jnp.var(params['tau'])  # Negative because we want to maximize variance
-            loss += 1e-4 * tau_diversity
         
         # Compute metrics
         metrics = {
@@ -150,41 +150,50 @@ class LiquidNetworkTrainer:
     
     def _update_step(
         self, 
-        params: Dict[str, jnp.ndarray], 
+        model: LiquidNeuralNetwork, 
         opt_state: Any, 
         inputs: jnp.ndarray, 
-        targets: jnp.ndarray,
-        dt: float = 0.1
-    ) -> Tuple[Dict[str, jnp.ndarray], Any, Dict[str, jnp.ndarray]]:
-        """Single training step."""
-        # Compute loss and gradients
-        (loss, metrics), grads = value_and_grad(
-            self._loss_and_metrics, has_aux=True
-        )(params, inputs, targets, dt)
+        targets: jnp.ndarray
+    ) -> Tuple[LiquidNeuralNetwork, Any, Dict[str, jnp.ndarray]]:
+        """Single training step using equinox partitioning."""
+        # Partition model into differentiable and static parts
+        diff_params, static_params = eqx.partition(model, eqx.is_array)
+        
+        # Compute loss and gradients w.r.t. differentiable parameters only
+        def loss_fn(diff_p):
+            return self._loss_and_metrics(diff_p, static_params, inputs, targets)
+        
+        (loss, metrics), grads = value_and_grad(loss_fn, has_aux=True)(diff_params)
         
         # Compute gradient norm for monitoring
-        grad_norm = jnp.sqrt(sum(jnp.sum(g ** 2) for g in grads.values()))
+        array_grads = jax.tree.leaves(grads)
+        if array_grads:
+            grad_norm = jnp.sqrt(sum(jnp.sum(g ** 2) for g in array_grads))
+        else:
+            grad_norm = jnp.float32(0.0)
         metrics['gradient_norm'] = grad_norm
         
-        # Update parameters
-        updates, new_opt_state = self.optimizer.update(grads, opt_state, params)
-        new_params = optax.apply_updates(params, updates)
+        # Update differentiable parameters
+        updates, new_opt_state = self.optimizer.update(grads, opt_state, diff_params)
+        new_diff_params = eqx.apply_updates(diff_params, updates)
         
-        return new_params, new_opt_state, metrics
+        # Combine updated differentiable params with static params
+        new_model = eqx.combine(new_diff_params, static_params)
+        
+        return new_model, new_opt_state, metrics
     
     def train_step(
         self, 
         inputs: jnp.ndarray, 
-        targets: jnp.ndarray,
-        dt: float = 0.1
+        targets: jnp.ndarray
     ) -> Dict[str, float]:
         """Single training step."""
-        new_params, new_opt_state, metrics = self._compiled_update(
-            self.model.params, self.opt_state, inputs, targets, dt
+        new_model, new_opt_state, metrics = self._update_step(
+            self.model, self.opt_state, inputs, targets
         )
         
         # Update model and optimizer state
-        self.model.update_params(new_params)
+        self.model = new_model
         self.opt_state = new_opt_state
         
         # Convert to Python floats for logging
@@ -193,12 +202,12 @@ class LiquidNetworkTrainer:
     def validate(
         self, 
         val_inputs: jnp.ndarray, 
-        val_targets: jnp.ndarray,
-        dt: float = 0.1
+        val_targets: jnp.ndarray
     ) -> Dict[str, float]:
         """Validation step."""
-        loss, metrics = self._compiled_loss(
-            self.model.params, val_inputs, val_targets, dt
+        diff_params, static_params = eqx.partition(self.model, eqx.is_array)
+        loss, metrics = self._loss_and_metrics(
+            diff_params, static_params, val_inputs, val_targets
         )
         return {k: float(v) for k, v in metrics.items()}
     
@@ -207,7 +216,6 @@ class LiquidNetworkTrainer:
         train_data: Tuple[jnp.ndarray, jnp.ndarray],
         val_data: Optional[Tuple[jnp.ndarray, jnp.ndarray]] = None,
         epochs: int = 100,
-        dt: float = 0.1,
         verbose: bool = True,
         log_interval: int = 10
     ) -> Dict[str, list]:
@@ -216,12 +224,12 @@ class LiquidNetworkTrainer:
         
         for epoch in range(epochs):
             # Training step
-            train_metrics = self.train_step(train_inputs, train_targets, dt)
+            train_metrics = self.train_step(train_inputs, train_targets)
             
             # Validation step
             if val_data is not None:
                 val_inputs, val_targets = val_data
-                val_metrics = self.validate(val_inputs, val_targets, dt)
+                val_metrics = self.validate(val_inputs, val_targets)
             else:
                 val_metrics = {'loss': float('nan')}
             
@@ -237,30 +245,172 @@ class LiquidNetworkTrainer:
                 if val_data is not None:
                     print(f"  Val Loss: {val_metrics['loss']:.6f}")
                 print(f"  Grad Norm: {train_metrics.get('gradient_norm', 0.0):.6f}")
-                
-                # Print time constant info if available
-                if 'tau' in self.model.params:
-                    tau_stats = {
-                        'mean': float(jnp.mean(self.model.params['tau'])),
-                        'std': float(jnp.std(self.model.params['tau']))
-                    }
-                    print(f"  Time Constants - Mean: {tau_stats['mean']:.3f}, Std: {tau_stats['std']:.3f}")
                 print()
         
         return self.history
     
     def save_checkpoint(self, filepath: str):
         """Save model checkpoint."""
-        checkpoint = {
-            'params': self.model.params,
-            'opt_state': self.opt_state,
-            'history': self.history
-        }
-        jnp.save(filepath, checkpoint)
+        eqx.tree_serialise_leaves(filepath, self.model)
     
     def load_checkpoint(self, filepath: str):
         """Load model checkpoint."""
-        checkpoint = jnp.load(filepath, allow_pickle=True).item()
-        self.model.update_params(checkpoint['params'])
-        self.opt_state = checkpoint['opt_state']
-        self.history = checkpoint['history']
+        self.model = eqx.tree_deserialise_leaves(filepath, self.model)
+
+
+# JIT compile the training functions for performance
+@jax.jit
+def compiled_loss_fn(model, inputs, targets, loss_fn):
+    """JIT-compiled loss function."""
+    predictions = model(inputs)
+    return loss_fn(predictions, targets)
+
+
+@jax.jit  
+def compiled_update_step(model, opt_state, optimizer, inputs, targets, loss_fn):
+    """JIT-compiled training step."""
+    def loss_fn_wrapper(model):
+        predictions = model(inputs)
+        return loss_fn(predictions, targets)
+    
+    loss, grads = value_and_grad(loss_fn_wrapper)(model)
+    updates, new_opt_state = optimizer.update(grads, opt_state)
+    new_model = eqx.apply_updates(model, updates)
+    
+    return new_model, new_opt_state, loss
+
+
+class AdvancedLiquidTrainer(LiquidNetworkTrainer):
+    """
+    Advanced trainer with additional features for liquid neural networks.
+    
+    Includes:
+    - Learning rate scheduling
+    - Early stopping
+    - Liquid state analysis
+    - Adaptive time constants
+    """
+    
+    def __init__(
+        self,
+        model: LiquidNeuralNetwork,
+        learning_rate: float = 1e-3,
+        optimizer_name: str = 'adam',
+        loss_fn: str = 'mse',
+        gradient_clip: Optional[float] = 1.0,
+        lr_schedule: str = 'constant',
+        early_stopping_patience: int = 10
+    ):
+        super().__init__(model, learning_rate, optimizer_name, loss_fn, gradient_clip)
+        
+        self.lr_schedule = lr_schedule
+        self.early_stopping_patience = early_stopping_patience
+        self.best_val_loss = float('inf')
+        self.patience_counter = 0
+        
+        # Liquid state tracking
+        self.liquid_state_history = []
+    
+    def _get_learning_rate(self, epoch: int, base_lr: float) -> float:
+        """Get learning rate based on schedule."""
+        if self.lr_schedule == 'constant':
+            return base_lr
+        elif self.lr_schedule == 'exponential':
+            return base_lr * (0.95 ** epoch)
+        elif self.lr_schedule == 'cosine':
+            return base_lr * 0.5 * (1 + jnp.cos(jnp.pi * epoch / 100))
+        elif self.lr_schedule == 'step':
+            if epoch < 50:
+                return base_lr
+            elif epoch < 80:
+                return base_lr * 0.1
+            else:
+                return base_lr * 0.01
+        else:
+            return base_lr
+    
+    def analyze_liquid_states(self, inputs: jnp.ndarray) -> Dict[str, Any]:
+        """Analyze liquid state dynamics."""
+        if hasattr(self.model, 'get_liquid_states'):
+            states = self.model.get_liquid_states(inputs)
+            
+            analysis = {}
+            for i, state in enumerate(states):
+                layer_analysis = {
+                    'mean_activity': float(jnp.mean(jnp.abs(state))),
+                    'activity_variance': float(jnp.var(state)),
+                    'sparsity': float(jnp.mean(jnp.abs(state) < 0.1)),
+                    'max_activity': float(jnp.max(jnp.abs(state)))
+                }
+                analysis[f'layer_{i}'] = layer_analysis
+            
+            return analysis
+        else:
+            return {}
+    
+    def fit_advanced(
+        self,
+        train_data: Tuple[jnp.ndarray, jnp.ndarray],
+        val_data: Optional[Tuple[jnp.ndarray, jnp.ndarray]] = None,
+        epochs: int = 100,
+        verbose: bool = True,
+        log_interval: int = 10,
+        analyze_states: bool = True
+    ) -> Dict[str, list]:
+        """Advanced training with additional features."""
+        train_inputs, train_targets = train_data
+        
+        for epoch in range(epochs):
+            # Update learning rate
+            current_lr = self._get_learning_rate(epoch, self.learning_rate)
+            
+            # Training step
+            train_metrics = self.train_step(train_inputs, train_targets)
+            
+            # Validation step
+            if val_data is not None:
+                val_inputs, val_targets = val_data
+                val_metrics = self.validate(val_inputs, val_targets)
+                
+                # Early stopping check
+                if val_metrics['loss'] < self.best_val_loss:
+                    self.best_val_loss = val_metrics['loss']
+                    self.patience_counter = 0
+                else:
+                    self.patience_counter += 1
+                    
+                if self.patience_counter >= self.early_stopping_patience:
+                    if verbose:
+                        print(f"Early stopping at epoch {epoch + 1}")
+                    break
+            else:
+                val_metrics = {'loss': float('nan')}
+            
+            # Liquid state analysis
+            if analyze_states and (epoch + 1) % (log_interval * 2) == 0:
+                state_analysis = self.analyze_liquid_states(train_inputs[:1])  # Analyze single sample
+                self.liquid_state_history.append(state_analysis)
+            
+            # Log metrics
+            self.history['train_loss'].append(train_metrics['loss'])
+            self.history['val_loss'].append(val_metrics['loss'])
+            self.history['learning_rate'].append(current_lr)
+            self.history['gradient_norm'].append(train_metrics.get('gradient_norm', 0.0))
+            
+            # Print progress
+            if verbose and (epoch + 1) % log_interval == 0:
+                print(f"Epoch {epoch + 1}/{epochs} (LR: {current_lr:.2e})")
+                print(f"  Train Loss: {train_metrics['loss']:.6f}")
+                if val_data is not None:
+                    print(f"  Val Loss: {val_metrics['loss']:.6f}")
+                print(f"  Grad Norm: {train_metrics.get('gradient_norm', 0.0):.6f}")
+                
+                if analyze_states and self.liquid_state_history:
+                    recent_analysis = self.liquid_state_history[-1]
+                    if 'layer_0' in recent_analysis:
+                        layer_0 = recent_analysis['layer_0']
+                        print(f"  Liquid States - Activity: {layer_0['mean_activity']:.4f}, "
+                              f"Sparsity: {layer_0['sparsity']:.3f}")
+                print()
+        
+        return self.history

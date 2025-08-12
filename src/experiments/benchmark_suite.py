@@ -157,4 +157,417 @@ class BenchmarkSuite:
             models = self.validator.create_baseline_models(input_size, output_size)
             
             # Run multiple trials for statistical significance
-            task_results = []\n            for trial in range(exp_config['n_runs']):\n                print(f\"  Trial {trial + 1}/{exp_config['n_runs']}\")\n                \n                trial_results = self.validator.run_single_task_experiment(\n                    task_name, inputs, targets, models,\n                    train_split=exp_config['train_split'],\n                    epochs=exp_config['epochs'],\n                    dt=exp_config['dt']\n                )\n                \n                task_results.append(trial_results)\n            \n            # Aggregate results\n            aggregated = self.validator._aggregate_multiple_runs(task_results)\n            results[task_name] = aggregated\n        \n        return results\n    \n    def run_ablation_studies(self, tasks: Dict[str, Tuple[jnp.ndarray, jnp.ndarray]]) -> Dict[str, Any]:\n        \"\"\"Run systematic ablation studies.\"\"\"\n        print(\"\\nRunning ablation studies...\")\n        \n        ablation_results = {}\n        model_config = self.config['models']\n        \n        # Test different hidden sizes\n        print(\"  Ablation: Hidden Size\")\n        base_config = {'input_size': 1, 'output_size': 1, 'hidden_size': 32}\n        \n        hidden_size_configs = {\n            f'hidden_{hs}': {'hidden_size': hs} \n            for hs in model_config['hidden_sizes']\n        }\n        \n        # Run ablation on a representative task\n        representative_task = 'temporal_patterns'\n        if representative_task in tasks:\n            inputs, targets = tasks[representative_task]\n            \n            # Update base config with correct dimensions\n            input_size = inputs.shape[-1] if inputs.ndim > 2 else 1\n            output_size = targets.shape[-1] if targets.ndim > 2 else 1\n            base_config.update({'input_size': input_size, 'output_size': output_size})\n            \n            ablation_results['hidden_size'] = self.validator.run_ablation_study(\n                representative_task, inputs, targets, \n                base_config, hidden_size_configs, epochs=50\n            )\n        \n        # Test different time constants\n        print(\"  Ablation: Time Constants\")\n        time_constant_configs = {\n            f'tau_{tc}': {'time_constant_init': tc}\n            for tc in model_config['time_constants']\n        }\n        \n        if representative_task in tasks:\n            inputs, targets = tasks[representative_task]\n            ablation_results['time_constants'] = self.validator.run_ablation_study(\n                representative_task, inputs, targets,\n                base_config, time_constant_configs, epochs=50\n            )\n        \n        return ablation_results\n    \n    def run_scalability_analysis(self) -> Dict[str, Any]:\n        \"\"\"Analyze computational scalability.\"\"\"\n        print(\"\\nRunning scalability analysis...\")\n        \n        # Create test models\n        test_models = {\n            'liquid_small': self.validator.create_baseline_models(10, 1)['liquid_nn'],\n            'liquid_medium': self.validator.create_baseline_models(50, 1)['liquid_nn'],\n            'ct_rnn': self.validator.create_baseline_models(10, 1)['ct_rnn']\n        }\n        \n        # Benchmark efficiency\n        efficiency_results = self.validator.benchmark_computational_efficiency(\n            test_models,\n            input_sizes=[10, 25, 50, 100],\n            sequence_lengths=[50, 100, 200, 500],\n            n_trials=10\n        )\n        \n        return efficiency_results\n    \n    def run_statistical_analysis(self, results: Dict[str, Any]) -> Dict[str, Any]:\n        \"\"\"Perform rigorous statistical analysis of results.\"\"\"\n        print(\"\\nPerforming statistical analysis...\")\n        \n        statistical_results = {}\n        alpha = self.config['statistical_tests']['alpha']\n        \n        # Extract model performance data\n        model_performance = {}\n        \n        for task_name, task_results in results.items():\n            if isinstance(task_results, dict):\n                for model_name, model_results in task_results.items():\n                    if isinstance(model_results, dict) and 'mean_val_loss' in model_results:\n                        if model_name not in model_performance:\n                            model_performance[model_name] = []\n                        model_performance[model_name].append(model_results['mean_val_loss'])\n        \n        # Pairwise statistical tests\n        model_names = list(model_performance.keys())\n        significance_matrix = {}\n        \n        for i, model_a in enumerate(model_names):\n            significance_matrix[model_a] = {}\n            for j, model_b in enumerate(model_names):\n                if i != j and len(model_performance[model_a]) > 1 and len(model_performance[model_b]) > 1:\n                    try:\n                        test_result = self.validator.statistical_significance_test(\n                            model_performance[model_a],\n                            model_performance[model_b],\n                            alpha\n                        )\n                        significance_matrix[model_a][model_b] = test_result\n                    except Exception as e:\n                        significance_matrix[model_a][model_b] = {'error': str(e)}\n        \n        statistical_results['pairwise_tests'] = significance_matrix\n        \n        # Overall performance rankings with confidence intervals\n        performance_summary = {}\n        for model_name, performances in model_performance.items():\n            if len(performances) > 0:\n                performance_summary[model_name] = {\n                    'mean_performance': np.mean(performances),\n                    'std_performance': np.std(performances),\n                    'n_tasks': len(performances),\n                    'confidence_interval_95': np.percentile(performances, [2.5, 97.5]).tolist() if len(performances) > 1 else [np.mean(performances)] * 2\n                }\n        \n        statistical_results['performance_summary'] = performance_summary\n        \n        return statistical_results\n    \n    def generate_research_report(self, all_results: Dict[str, Any]) -> str:\n        \"\"\"Generate publication-ready research report.\"\"\"\n        report_lines = []\n        \n        # Title and metadata\n        report_lines.extend([\n            \"LIQUID NEURAL NETWORKS: COMPREHENSIVE BENCHMARK STUDY\",\n            \"=\" * 60,\n            \"\",\n            f\"Generated: {self.metadata['timestamp']}\",\n            f\"Seed: {self.metadata['seed']}\",\n            \"\"\n        ])\n        \n        # Abstract/Summary\n        if 'baseline_comparison' in all_results:\n            baseline_results = all_results['baseline_comparison']\n            \n            # Find best performing model overall\n            model_scores = {}\n            for task_results in baseline_results.values():\n                for model_name, model_data in task_results.items():\n                    if isinstance(model_data, dict) and 'mean_val_loss' in model_data:\n                        if model_name not in model_scores:\n                            model_scores[model_name] = []\n                        model_scores[model_name].append(model_data['mean_val_loss'])\n            \n            best_model = min(model_scores.keys(), \n                           key=lambda x: np.mean(model_scores[x]) if model_scores[x] else float('inf'))\n            \n            report_lines.extend([\n                \"EXECUTIVE SUMMARY\",\n                \"-\" * 20,\n                f\"Best overall model: {best_model}\",\n                f\"Number of benchmark tasks: {len(baseline_results)}\",\n                f\"Number of model architectures tested: {len(model_scores)}\",\n                \"\"\n            ])\n        \n        # Detailed Results\n        report_lines.extend([\n            \"DETAILED BENCHMARK RESULTS\",\n            \"-\" * 30\n        ])\n        \n        if 'baseline_comparison' in all_results:\n            for task_name, task_results in all_results['baseline_comparison'].items():\n                report_lines.extend([\n                    \"\",\n                    f\"{task_name.upper()}\",\n                    \"-\" * len(task_name)\n                ])\n                \n                # Sort models by performance\n                model_items = [(name, data) for name, data in task_results.items() \n                             if isinstance(data, dict) and 'mean_val_loss' in data]\n                model_items.sort(key=lambda x: x[1]['mean_val_loss'])\n                \n                for model_name, model_data in model_items:\n                    report_lines.extend([\n                        f\"  {model_name}:\",\n                        f\"    Validation Loss: {model_data['mean_val_loss']:.6f} ± {model_data['std_val_loss']:.6f}\",\n                        f\"    Training Time: {model_data['mean_training_time']:.3f}s ± {model_data['std_training_time']:.3f}s\",\n                        f\"    Convergence Rate: {model_data['convergence_rate']:.1%}\",\n                        f\"    Success Rate: {model_data['successful_runs']}/{model_data['n_runs']}\"\n                    ])\n        \n        # Statistical Analysis\n        if 'statistical_analysis' in all_results:\n            report_lines.extend([\n                \"\",\n                \"STATISTICAL ANALYSIS\",\n                \"-\" * 20\n            ])\n            \n            stat_results = all_results['statistical_analysis']\n            \n            if 'performance_summary' in stat_results:\n                report_lines.append(\"\\nPerformance Summary (across all tasks):\")\n                perf_summary = stat_results['performance_summary']\n                \n                # Sort by mean performance\n                sorted_models = sorted(perf_summary.items(), \n                                     key=lambda x: x[1]['mean_performance'])\n                \n                for model_name, stats in sorted_models:\n                    ci = stats['confidence_interval_95']\n                    report_lines.append(\n                        f\"  {model_name}: {stats['mean_performance']:.6f} \"\n                        f\"(95% CI: [{ci[0]:.6f}, {ci[1]:.6f}])\"\n                    )\n        \n        # Ablation Studies\n        if 'ablation_studies' in all_results:\n            report_lines.extend([\n                \"\",\n                \"ABLATION STUDIES\",\n                \"-\" * 16\n            ])\n            \n            for ablation_type, ablation_data in all_results['ablation_studies'].items():\n                report_lines.extend([\n                    f\"\\n{ablation_type.replace('_', ' ').title()}:\",\n                    \"-\" * (len(ablation_type) + 1)\n                ])\n                \n                # Sort configurations by performance\n                config_items = [(name, data) for name, data in ablation_data.items()]\n                config_items.sort(key=lambda x: x[1].get('final_val_loss', float('inf')))\n                \n                for config_name, config_data in config_items:\n                    val_loss = config_data.get('final_val_loss', 'N/A')\n                    train_time = config_data.get('training_time', 'N/A')\n                    report_lines.append(f\"  {config_name}: Val Loss = {val_loss:.6f}, Time = {train_time:.3f}s\")\n        \n        # Scalability Analysis\n        if 'scalability_analysis' in all_results:\n            report_lines.extend([\n                \"\",\n                \"SCALABILITY ANALYSIS\",\n                \"-\" * 19\n            ])\n            \n            scalability = all_results['scalability_analysis']\n            for model_name, model_data in scalability.items():\n                report_lines.append(f\"\\n{model_name}:\")\n                \n                for config_name, config_data in model_data.items():\n                    throughput = config_data['throughput']\n                    avg_time = config_data['avg_forward_time']\n                    report_lines.append(\n                        f\"  {config_name}: {throughput:.1f} seq/s, \"\n                        f\"avg time: {avg_time*1000:.2f}ms\"\n                    )\n        \n        # Recommendations\n        report_lines.extend([\n            \"\",\n            \"RECOMMENDATIONS\",\n            \"-\" * 15,\n            \"\"\n        ])\n        \n        if 'statistical_analysis' in all_results and 'performance_summary' in all_results['statistical_analysis']:\n            perf_summary = all_results['statistical_analysis']['performance_summary']\n            best_model = min(perf_summary.keys(), key=lambda x: perf_summary[x]['mean_performance'])\n            \n            report_lines.extend([\n                f\"• Best overall architecture: {best_model}\",\n                \"• Liquid Neural Networks show strong performance on temporal tasks\",\n                \"• Consider ensemble methods for critical applications\",\n                \"• Hyperparameter tuning recommended for specific domains\"\n            ])\n        \n        return \"\\n\".join(report_lines)\n    \n    def run_full_benchmark_suite(self) -> Dict[str, Any]:\n        \"\"\"Run the complete benchmark suite.\"\"\"\n        print(\"Starting full benchmark suite...\")\n        print(f\"Results will be saved to: {self.output_dir}\")\n        \n        start_time = time.time()\n        \n        # Generate benchmark tasks\n        tasks = self.generate_research_benchmark_tasks()\n        \n        # Run baseline comparison\n        baseline_results = self.run_baseline_comparison_study(tasks)\n        \n        # Run ablation studies\n        ablation_results = self.run_ablation_studies(tasks)\n        \n        # Run scalability analysis\n        scalability_results = self.run_scalability_analysis()\n        \n        # Statistical analysis\n        statistical_results = self.run_statistical_analysis(baseline_results)\n        \n        # Compile all results\n        all_results = {\n            'baseline_comparison': baseline_results,\n            'ablation_studies': ablation_results,\n            'scalability_analysis': scalability_results,\n            'statistical_analysis': statistical_results,\n            'metadata': self.metadata\n        }\n        \n        # Generate report\n        research_report = self.generate_research_report(all_results)\n        \n        # Save results\n        self._save_json(all_results, 'benchmark_results.json')\n        self._save_text(research_report, 'benchmark_report.txt')\n        \n        total_time = time.time() - start_time\n        \n        print(f\"\\nBenchmark suite completed in {total_time:.2f} seconds\")\n        print(f\"Results saved to {self.output_dir}\")\n        \n        return all_results\n    \n    def _save_json(self, data: Any, filename: str):\n        \"\"\"Save data as JSON file.\"\"\"\n        filepath = self.output_dir / filename\n        \n        # Convert numpy arrays and other non-serializable objects\n        def convert_for_json(obj):\n            if isinstance(obj, jnp.ndarray):\n                return obj.tolist()\n            elif isinstance(obj, np.ndarray):\n                return obj.tolist()\n            elif isinstance(obj, (np.integer, jnp.integer)):\n                return int(obj)\n            elif isinstance(obj, (np.floating, jnp.floating)):\n                return float(obj)\n            elif isinstance(obj, dict):\n                return {k: convert_for_json(v) for k, v in obj.items()}\n            elif isinstance(obj, (list, tuple)):\n                return [convert_for_json(item) for item in obj]\n            else:\n                return obj\n        \n        converted_data = convert_for_json(data)\n        \n        with open(filepath, 'w') as f:\n            json.dump(converted_data, f, indent=2)\n    \n    def _save_text(self, text: str, filename: str):\n        \"\"\"Save text to file.\"\"\"\n        filepath = self.output_dir / filename\n        with open(filepath, 'w') as f:\n            f.write(text)\n    \n    def load_results(self, filepath: str) -> Dict[str, Any]:\n        \"\"\"Load previously saved benchmark results.\"\"\"\n        with open(filepath, 'r') as f:\n            return json.load(f)\n    \n    def compare_benchmark_runs(self, results_list: List[Dict[str, Any]]) -> Dict[str, Any]:\n        \"\"\"Compare multiple benchmark runs for reproducibility analysis.\"\"\"\n        print(\"Comparing benchmark runs for reproducibility...\")\n        \n        # Extract performance metrics from each run\n        all_performances = []\n        \n        for run_results in results_list:\n            if 'baseline_comparison' in run_results:\n                run_performance = {}\n                for task_name, task_results in run_results['baseline_comparison'].items():\n                    for model_name, model_data in task_results.items():\n                        if isinstance(model_data, dict) and 'mean_val_loss' in model_data:\n                            key = f\"{task_name}_{model_name}\"\n                            run_performance[key] = model_data['mean_val_loss']\n                all_performances.append(run_performance)\n        \n        # Compute reproducibility metrics\n        reproducibility_results = {}\n        \n        if all_performances:\n            all_keys = set().union(*(perf.keys() for perf in all_performances))\n            \n            for key in all_keys:\n                values = [perf.get(key, float('nan')) for perf in all_performances]\n                values = [v for v in values if not np.isnan(v)]\n                \n                if len(values) > 1:\n                    reproducibility_results[key] = {\n                        'mean': np.mean(values),\n                        'std': np.std(values),\n                        'coefficient_of_variation': np.std(values) / np.mean(values) if np.mean(values) != 0 else float('inf'),\n                        'n_runs': len(values)\n                    }\n        \n        return reproducibility_results
+            task_results = []
+            for trial in range(exp_config['n_runs']):
+                print(f"  Trial {trial + 1}/{exp_config['n_runs']}")
+                
+                trial_results = self.validator.run_single_task_experiment(
+                    task_name, inputs, targets, models,
+                    train_split=exp_config['train_split'],
+                    epochs=exp_config['epochs'],
+                    dt=exp_config['dt']
+                )
+                
+                task_results.append(trial_results)
+            
+            # Aggregate results
+            aggregated = self.validator._aggregate_multiple_runs(task_results)
+            results[task_name] = aggregated
+        
+        return results
+    
+    def run_ablation_studies(self, tasks: Dict[str, Tuple[jnp.ndarray, jnp.ndarray]]) -> Dict[str, Any]:
+        """Run systematic ablation studies."""
+        print("\nRunning ablation studies...")
+        
+        ablation_results = {}
+        model_config = self.config['models']
+        
+        # Test different hidden sizes
+        print("  Ablation: Hidden Size")
+        base_config = {'input_size': 1, 'output_size': 1, 'hidden_size': 32}
+        
+        hidden_size_configs = {
+            f'hidden_{hs}': {'hidden_size': hs} 
+            for hs in model_config['hidden_sizes']
+        }
+        
+        # Run ablation on a representative task
+        representative_task = 'temporal_patterns'
+        if representative_task in tasks:
+            inputs, targets = tasks[representative_task]
+            
+            # Update base config with correct dimensions
+            input_size = inputs.shape[-1] if inputs.ndim > 2 else 1
+            output_size = targets.shape[-1] if targets.ndim > 2 else 1
+            base_config.update({'input_size': input_size, 'output_size': output_size})
+            
+            ablation_results['hidden_size'] = self.validator.run_ablation_study(
+                representative_task, inputs, targets, 
+                base_config, hidden_size_configs, epochs=50
+            )
+        
+        # Test different time constants
+        print("  Ablation: Time Constants")
+        time_constant_configs = {
+            f'tau_{tc}': {'time_constant_init': tc}
+            for tc in model_config['time_constants']
+        }
+        
+        if representative_task in tasks:
+            inputs, targets = tasks[representative_task]
+            ablation_results['time_constants'] = self.validator.run_ablation_study(
+                representative_task, inputs, targets,
+                base_config, time_constant_configs, epochs=50
+            )
+        
+        return ablation_results
+    
+    def run_scalability_analysis(self) -> Dict[str, Any]:
+        """Analyze computational scalability."""
+        print("\nRunning scalability analysis...")
+        
+        # Create test models
+        test_models = {
+            'liquid_small': self.validator.create_baseline_models(10, 1)['liquid_nn'],
+            'liquid_medium': self.validator.create_baseline_models(50, 1)['liquid_nn'],
+            'ct_rnn': self.validator.create_baseline_models(10, 1)['ct_rnn']
+        }
+        
+        # Benchmark efficiency
+        efficiency_results = self.validator.benchmark_computational_efficiency(
+            test_models,
+            input_sizes=[10, 25, 50, 100],
+            sequence_lengths=[50, 100, 200, 500],
+            n_trials=10
+        )
+        
+        return efficiency_results
+    
+    def run_statistical_analysis(self, results: Dict[str, Any]) -> Dict[str, Any]:
+        """Perform rigorous statistical analysis of results."""
+        print("\nPerforming statistical analysis...")
+        
+        statistical_results = {}
+        alpha = self.config['statistical_tests']['alpha']
+        
+        # Extract model performance data
+        model_performance = {}
+        
+        for task_name, task_results in results.items():
+            if isinstance(task_results, dict):
+                for model_name, model_results in task_results.items():
+                    if isinstance(model_results, dict) and 'mean_val_loss' in model_results:
+                        if model_name not in model_performance:
+                            model_performance[model_name] = []
+                        model_performance[model_name].append(model_results['mean_val_loss'])
+        
+        # Pairwise statistical tests
+        model_names = list(model_performance.keys())
+        significance_matrix = {}
+        
+        for i, model_a in enumerate(model_names):
+            significance_matrix[model_a] = {}
+            for j, model_b in enumerate(model_names):
+                if i != j and len(model_performance[model_a]) > 1 and len(model_performance[model_b]) > 1:
+                    try:
+                        test_result = self.validator.statistical_significance_test(
+                            model_performance[model_a],
+                            model_performance[model_b],
+                            alpha
+                        )
+                        significance_matrix[model_a][model_b] = test_result
+                    except Exception as e:
+                        significance_matrix[model_a][model_b] = {'error': str(e)}
+        
+        statistical_results['pairwise_tests'] = significance_matrix
+        
+        # Overall performance rankings with confidence intervals
+        performance_summary = {}
+        for model_name, performances in model_performance.items():
+            if len(performances) > 0:
+                performance_summary[model_name] = {
+                    'mean_performance': np.mean(performances),
+                    'std_performance': np.std(performances),
+                    'n_tasks': len(performances),
+                    'confidence_interval_95': np.percentile(performances, [2.5, 97.5]).tolist() if len(performances) > 1 else [np.mean(performances)] * 2
+                }
+        
+        statistical_results['performance_summary'] = performance_summary
+        
+        return statistical_results
+    
+    def generate_research_report(self, all_results: Dict[str, Any]) -> str:
+        """Generate publication-ready research report."""
+        report_lines = []
+        
+        # Title and metadata
+        report_lines.extend([
+            "LIQUID NEURAL NETWORKS: COMPREHENSIVE BENCHMARK STUDY",
+            "=" * 60,
+            "",
+            f"Generated: {self.metadata['timestamp']}",
+            f"Seed: {self.metadata['seed']}",
+            ""
+        ])
+        
+        # Abstract/Summary
+        if 'baseline_comparison' in all_results:
+            baseline_results = all_results['baseline_comparison']
+            
+            # Find best performing model overall
+            model_scores = {}
+            for task_results in baseline_results.values():
+                for model_name, model_data in task_results.items():
+                    if isinstance(model_data, dict) and 'mean_val_loss' in model_data:
+                        if model_name not in model_scores:
+                            model_scores[model_name] = []
+                        model_scores[model_name].append(model_data['mean_val_loss'])
+            
+            best_model = min(model_scores.keys(), 
+                           key=lambda x: np.mean(model_scores[x]) if model_scores[x] else float('inf'))
+            
+            report_lines.extend([
+                "EXECUTIVE SUMMARY",
+                "-" * 20,
+                f"Best overall model: {best_model}",
+                f"Number of benchmark tasks: {len(baseline_results)}",
+                f"Number of model architectures tested: {len(model_scores)}",
+                ""
+            ])
+        
+        # Detailed Results
+        report_lines.extend([
+            "DETAILED BENCHMARK RESULTS",
+            "-" * 30
+        ])
+        
+        if 'baseline_comparison' in all_results:
+            for task_name, task_results in all_results['baseline_comparison'].items():
+                report_lines.extend([
+                    "",
+                    f"{task_name.upper()}",
+                    "-" * len(task_name)
+                ])
+                
+                # Sort models by performance
+                model_items = [(name, data) for name, data in task_results.items() 
+                             if isinstance(data, dict) and 'mean_val_loss' in data]
+                model_items.sort(key=lambda x: x[1]['mean_val_loss'])
+                
+                for model_name, model_data in model_items:
+                    report_lines.extend([
+                        f"  {model_name}:",
+                        f"    Validation Loss: {model_data['mean_val_loss']:.6f} ± {model_data['std_val_loss']:.6f}",
+                        f"    Training Time: {model_data['mean_training_time']:.3f}s ± {model_data['std_training_time']:.3f}s",
+                        f"    Convergence Rate: {model_data['convergence_rate']:.1%}",
+                        f"    Success Rate: {model_data['successful_runs']}/{model_data['n_runs']}"
+                    ])
+        
+        # Statistical Analysis
+        if 'statistical_analysis' in all_results:
+            report_lines.extend([
+                "",
+                "STATISTICAL ANALYSIS",
+                "-" * 20
+            ])
+            
+            stat_results = all_results['statistical_analysis']
+            
+            if 'performance_summary' in stat_results:
+                report_lines.append("\nPerformance Summary (across all tasks):")
+                perf_summary = stat_results['performance_summary']
+                
+                # Sort by mean performance
+                sorted_models = sorted(perf_summary.items(), 
+                                     key=lambda x: x[1]['mean_performance'])
+                
+                for model_name, stats in sorted_models:
+                    ci = stats['confidence_interval_95']
+                    report_lines.append(
+                        f"  {model_name}: {stats['mean_performance']:.6f} "
+                        f"(95% CI: [{ci[0]:.6f}, {ci[1]:.6f}])"
+                    )
+        
+        # Ablation Studies
+        if 'ablation_studies' in all_results:
+            report_lines.extend([
+                "",
+                "ABLATION STUDIES",
+                "-" * 16
+            ])
+            
+            for ablation_type, ablation_data in all_results['ablation_studies'].items():
+                report_lines.extend([
+                    f"\n{ablation_type.replace('_', ' ').title()}:",
+                    "-" * (len(ablation_type) + 1)
+                ])
+                
+                # Sort configurations by performance
+                config_items = [(name, data) for name, data in ablation_data.items()]
+                config_items.sort(key=lambda x: x[1].get('final_val_loss', float('inf')))
+                
+                for config_name, config_data in config_items:
+                    val_loss = config_data.get('final_val_loss', 'N/A')
+                    train_time = config_data.get('training_time', 'N/A')
+                    report_lines.append(f"  {config_name}: Val Loss = {val_loss:.6f}, Time = {train_time:.3f}s")
+        
+        # Scalability Analysis
+        if 'scalability_analysis' in all_results:
+            report_lines.extend([
+                "",
+                "SCALABILITY ANALYSIS",
+                "-" * 19
+            ])
+            
+            scalability = all_results['scalability_analysis']
+            for model_name, model_data in scalability.items():
+                report_lines.append(f"\n{model_name}:")
+                
+                for config_name, config_data in model_data.items():
+                    throughput = config_data['throughput']
+                    avg_time = config_data['avg_forward_time']
+                    report_lines.append(
+                        f"  {config_name}: {throughput:.1f} seq/s, "
+                        f"avg time: {avg_time*1000:.2f}ms"
+                    )
+        
+        # Recommendations
+        report_lines.extend([
+            "",
+            "RECOMMENDATIONS",
+            "-" * 15,
+            ""
+        ])
+        
+        if 'statistical_analysis' in all_results and 'performance_summary' in all_results['statistical_analysis']:
+            perf_summary = all_results['statistical_analysis']['performance_summary']
+            best_model = min(perf_summary.keys(), key=lambda x: perf_summary[x]['mean_performance'])
+            
+            report_lines.extend([
+                f"• Best overall architecture: {best_model}",
+                "• Liquid Neural Networks show strong performance on temporal tasks",
+                "• Consider ensemble methods for critical applications",
+                "• Hyperparameter tuning recommended for specific domains"
+            ])
+        
+        return "\n".join(report_lines)
+    
+    def run_full_benchmark_suite(self) -> Dict[str, Any]:
+        """Run the complete benchmark suite."""
+        print("Starting full benchmark suite...")
+        print(f"Results will be saved to: {self.output_dir}")
+        
+        start_time = time.time()
+        
+        # Generate benchmark tasks
+        tasks = self.generate_research_benchmark_tasks()
+        
+        # Run baseline comparison
+        baseline_results = self.run_baseline_comparison_study(tasks)
+        
+        # Run ablation studies
+        ablation_results = self.run_ablation_studies(tasks)
+        
+        # Run scalability analysis
+        scalability_results = self.run_scalability_analysis()
+        
+        # Statistical analysis
+        statistical_results = self.run_statistical_analysis(baseline_results)
+        
+        # Compile all results
+        all_results = {
+            'baseline_comparison': baseline_results,
+            'ablation_studies': ablation_results,
+            'scalability_analysis': scalability_results,
+            'statistical_analysis': statistical_results,
+            'metadata': self.metadata
+        }
+        
+        # Generate report
+        research_report = self.generate_research_report(all_results)
+        
+        # Save results
+        self._save_json(all_results, 'benchmark_results.json')
+        self._save_text(research_report, 'benchmark_report.txt')
+        
+        total_time = time.time() - start_time
+        
+        print(f"\nBenchmark suite completed in {total_time:.2f} seconds")
+        print(f"Results saved to {self.output_dir}")
+        
+        return all_results
+    
+    def _save_json(self, data: Any, filename: str):
+        """Save data as JSON file."""
+        filepath = self.output_dir / filename
+        
+        # Convert numpy arrays and other non-serializable objects
+        def convert_for_json(obj):
+            if isinstance(obj, jnp.ndarray):
+                return obj.tolist()
+            elif isinstance(obj, np.ndarray):
+                return obj.tolist()
+            elif isinstance(obj, (np.integer, jnp.integer)):
+                return int(obj)
+            elif isinstance(obj, (np.floating, jnp.floating)):
+                return float(obj)
+            elif isinstance(obj, dict):
+                return {k: convert_for_json(v) for k, v in obj.items()}
+            elif isinstance(obj, (list, tuple)):
+                return [convert_for_json(item) for item in obj]
+            else:
+                return obj
+        
+        converted_data = convert_for_json(data)
+        
+        with open(filepath, 'w') as f:
+            json.dump(converted_data, f, indent=2)
+    
+    def _save_text(self, text: str, filename: str):
+        """Save text to file."""
+        filepath = self.output_dir / filename
+        with open(filepath, 'w') as f:
+            f.write(text)
+    
+    def load_results(self, filepath: str) -> Dict[str, Any]:
+        """Load previously saved benchmark results."""
+        with open(filepath, 'r') as f:
+            return json.load(f)
+    
+    def compare_benchmark_runs(self, results_list: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Compare multiple benchmark runs for reproducibility analysis."""
+        print("Comparing benchmark runs for reproducibility...")
+        
+        # Extract performance metrics from each run
+        all_performances = []
+        
+        for run_results in results_list:
+            if 'baseline_comparison' in run_results:
+                run_performance = {}
+                for task_name, task_results in run_results['baseline_comparison'].items():
+                    for model_name, model_data in task_results.items():
+                        if isinstance(model_data, dict) and 'mean_val_loss' in model_data:
+                            key = f"{task_name}_{model_name}"
+                            run_performance[key] = model_data['mean_val_loss']
+                all_performances.append(run_performance)
+        
+        # Compute reproducibility metrics
+        reproducibility_results = {}
+        
+        if all_performances:
+            all_keys = set().union(*(perf.keys() for perf in all_performances))
+            
+            for key in all_keys:
+                values = [perf.get(key, float('nan')) for perf in all_performances]
+                values = [v for v in values if not np.isnan(v)]
+                
+                if len(values) > 1:
+                    reproducibility_results[key] = {
+                        'mean': np.mean(values),
+                        'std': np.std(values),
+                        'coefficient_of_variation': np.std(values) / np.mean(values) if np.mean(values) != 0 else float('inf'),
+                        'n_runs': len(values)
+                    }
+        
+        return reproducibility_results
