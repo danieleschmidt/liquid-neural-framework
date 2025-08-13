@@ -9,7 +9,14 @@ __version__ = "0.1.0"
 __author__ = "Daniel Schmidt"
 
 # Core models
-from .models import LiquidNeuralNetwork, ContinuousTimeRNN, AdaptiveNeuron
+try:
+    from .models import LiquidNeuralNetwork, ContinuousTimeRNN, AdaptiveNeuron
+    from .models.liquid_neural_network import LiquidLayer, AdaptiveLiquidNetwork
+    from .models.adaptive_neuron import LiquidNeuron, ResonatorNeuron, NeuronNetwork
+    from .models.continuous_time_rnn import NeuralODEFunc, GatedContinuousRNN, MultiScaleCTRNN
+except ImportError:
+    # Fallback for when JAX is not available
+    pass
 
 # Training algorithms
 from .algorithms import LiquidNetworkTrainer, AdaptiveOptimizer, ContinuousLearner
@@ -21,10 +28,20 @@ from .experiments import BenchmarkSuite, SyntheticTaskGenerator, ValidationExper
 from .utils import DataGenerator, ResultsVisualizer, PerformanceMetrics
 
 __all__ = [
-    # Models
+    # Core Models
     'LiquidNeuralNetwork',
     'ContinuousTimeRNN', 
     'AdaptiveNeuron',
+    
+    # Advanced Models
+    'LiquidLayer',
+    'AdaptiveLiquidNetwork',
+    'LiquidNeuron',
+    'ResonatorNeuron',
+    'NeuronNetwork',
+    'NeuralODEFunc',
+    'GatedContinuousRNN',
+    'MultiScaleCTRNN',
     
     # Algorithms
     'LiquidNetworkTrainer',
