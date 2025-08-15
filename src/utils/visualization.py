@@ -22,6 +22,10 @@ try:
     HAS_MATPLOTLIB = True
 except ImportError:
     HAS_MATPLOTLIB = False
+    plt = None
+    patches = None
+    FuncAnimation = None
+    sns = None
     warnings.warn("Matplotlib not available. Visualization functionality will be limited.")
 
 try:
@@ -105,7 +109,7 @@ class ResultsVisualizer:
         save_path: Optional[str] = None,
         show_confidence: bool = True,
         log_scale: bool = False
-    ) -> plt.Figure:
+    ) -> Optional[Any]:
         """
         Plot training curves with statistical analysis.
         
@@ -174,7 +178,7 @@ class ResultsVisualizer:
         save_path: Optional[str] = None,
         include_error_bars: bool = True,
         show_values: bool = True
-    ) -> plt.Figure:
+    ) -> Optional[Any]:
         """
         Create comprehensive performance comparison plots.
         """
@@ -251,7 +255,7 @@ class ResultsVisualizer:
         scalability_data: Dict[str, Dict[str, Dict[str, float]]],
         title: str = "Scalability Analysis",
         save_path: Optional[str] = None
-    ) -> plt.Figure:
+    ) -> Optional[Any]:
         """
         Plot scalability analysis results.
         """
@@ -371,7 +375,7 @@ class ResultsVisualizer:
         statistical_results: Dict[str, Any],
         title: str = "Statistical Significance Analysis",
         save_path: Optional[str] = None
-    ) -> plt.Figure:
+    ) -> Optional[Any]:
         """
         Plot statistical significance test results.
         """
@@ -461,7 +465,7 @@ class ResultsVisualizer:
         data: Dict[str, Any],
         figure_type: str = "comprehensive",
         save_path: Optional[str] = None
-    ) -> plt.Figure:
+    ) -> Optional[Any]:
         """
         Create publication-ready comprehensive figures.
         """
@@ -510,7 +514,7 @@ class NetworkVisualizer:
         model,
         title: str = "Liquid Neural Network Architecture",
         save_path: Optional[str] = None
-    ) -> plt.Figure:
+    ) -> Optional[Any]:
         """
         Visualize the network architecture.
         """
@@ -608,7 +612,7 @@ class NetworkVisualizer:
         time_constants: Union[np.ndarray, List[float]],
         title: str = "Time Constants Distribution",
         save_path: Optional[str] = None
-    ) -> plt.Figure:
+    ) -> Optional[Any]:
         """
         Visualize the distribution of time constants in the network.
         """
