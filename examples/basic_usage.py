@@ -19,9 +19,9 @@ import os
 # Add src to path for imports
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from models.liquid_network import LiquidNeuralNetwork
-from models.continuous_rnn import ContinuousTimeRNN
-from models.adaptive_neuron import AdaptiveNeuron, AdaptiveNeuronLayer
+from src.models.liquid_neural_network import LiquidNeuralNetwork
+from src.models.continuous_time_rnn import ContinuousTimeRNN
+from src.models.adaptive_neuron import AdaptiveNeuron, NeuronNetwork
 
 
 def generate_synthetic_data(key, num_sequences=50, seq_length=100, input_dim=1):

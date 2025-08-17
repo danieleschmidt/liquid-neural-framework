@@ -13,9 +13,9 @@ import os
 # Add src to path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from models.liquid_neural_network import LiquidNeuralNetwork
-from models.continuous_time_rnn import ContinuousTimeRNN
-from models.adaptive_neurons import AdaptiveNeuron, AdaptiveNeuronLayer
+from src.models.liquid_neural_network import LiquidNeuralNetwork
+from src.models.continuous_time_rnn import ContinuousTimeRNN
+from src.models.adaptive_neuron import AdaptiveNeuron, NeuronNetwork
 
 
 class TestLiquidNeuralNetwork:
