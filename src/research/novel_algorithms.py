@@ -96,10 +96,10 @@ class MetaAdaptiveLiquidNetwork(eqx.Module):
         self.activation = jnp.tanh
     
     def adapt_time_constants(self, hidden_state: jnp.ndarray, prediction_error: float) -> jnp.ndarray:
-        \"\"\"
+        """
         NOVEL ALGORITHM: Adaptive time constant modulation based on prediction error
         and hidden state dynamics.
-        \"\"\"
+        """
         # Compute activity-dependent adaptation
         activity_factor = jnp.mean(jnp.abs(hidden_state), axis=0)
         
