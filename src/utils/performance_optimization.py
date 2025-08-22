@@ -4,7 +4,7 @@ Performance optimization utilities for liquid neural networks.
 
 import functools
 import time
-from typing import Dict, Any, Optional, Callable, Tuple
+from typing import Dict, Any, Optional, Callable, Tuple, List
 import warnings
 
 try:
