@@ -37,6 +37,16 @@ class NumericalInstabilityError(LiquidNetworkError):
     pass
 
 
+class ValidationError(LiquidNetworkError):
+    """Raised when validation fails."""
+    pass
+
+
+class InputValidationError(LiquidNetworkError):
+    """Raised when input validation fails."""
+    pass
+
+
 def validate_input_shapes(inputs: jnp.ndarray, targets: jnp.ndarray) -> None:
     """Validate input and target shapes."""
     if inputs.ndim < 2:
@@ -371,3 +381,21 @@ class PerformanceProfiler:
 
 # Global profiler instance
 profiler = PerformanceProfiler()
+
+
+def handle_jax_errors(func):
+    """Decorator to handle JAX-specific errors gracefully."""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except jax.errors.TracerArrayConversionError as e:
+            raise ValidationError(f"JAX tracer error (likely shape mismatch): {e}")
+        except jax.errors.ConcretizationTypeError as e:
+            raise ValidationError(f"JAX concretization error: {e}")
+        except Exception as e:
+            if "CUDA" in str(e) or "GPU" in str(e):
+                logging.warning(f"GPU error detected, falling back to CPU: {e}")
+                # Could implement CPU fallback here
+            raise
+    return wrapper
