@@ -118,7 +118,7 @@ class MetaAdaptiveLiquidNetwork(eqx.Module):
         return tau_adapted
     
     def update_meta_memory(self, hidden_state: jnp.ndarray, reward: float) -> jnp.ndarray:
-        \"\"\"Update meta-memory based on reward and hidden state correlations.\"\"\"
+        """Update meta-memory based on reward and hidden state correlations."""
         # Compute outer product for correlation-based updates
         state_outer = jnp.outer(hidden_state.mean(axis=0), hidden_state.mean(axis=0))
         
@@ -132,10 +132,10 @@ class MetaAdaptiveLiquidNetwork(eqx.Module):
     
     def plastic_weight_update(self, W: jnp.ndarray, pre_activity: jnp.ndarray, 
                              post_activity: jnp.ndarray) -> jnp.ndarray:
-        \"\"\"
+        """
         NOVEL ALGORITHM: Neuromorphic-inspired plasticity rule with
         temporal dynamics and homeostatic regulation.
-        \"\"\"
+        """
         # Hebbian component
         hebbian = jnp.outer(post_activity.mean(axis=0), pre_activity.mean(axis=0))
         
@@ -163,9 +163,9 @@ class MetaAdaptiveLiquidNetwork(eqx.Module):
     def __call__(self, inputs: jnp.ndarray, hidden_state: jnp.ndarray, 
                  meta_state: Dict[str, jnp.ndarray], dt: float = 0.1, 
                  prediction_error: float = 0.0) -> Tuple[jnp.ndarray, jnp.ndarray, Dict[str, jnp.ndarray]]:
-        \"\"\"
+        """
         Forward pass with meta-adaptation and plasticity.
-        \"\"\"
+        """
         # Adapt time constants based on current state and error
         tau_current = self.adapt_time_constants(hidden_state, prediction_error)
         
@@ -278,7 +278,7 @@ class MultiScaleTemporalNetwork(eqx.Module):
     def compute_scale_dynamics(self, scale_idx: int, inputs: jnp.ndarray, 
                               scale_state: jnp.ndarray, cross_scale_input: jnp.ndarray,
                               dt: float) -> jnp.ndarray:
-        \"\"\"Compute dynamics for a specific temporal scale.\"\"\"
+        """Compute dynamics for a specific temporal scale."""
         scale_size = scale_state.shape[-1]
         
         # Select appropriate network for this scale
@@ -310,9 +310,9 @@ class MultiScaleTemporalNetwork(eqx.Module):
     def compute_cross_scale_interactions(self, fast_state: jnp.ndarray, 
                                        medium_state: jnp.ndarray,
                                        slow_state: jnp.ndarray) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]:
-        \"\"\"
+        """
         NOVEL ALGORITHM: Bidirectional cross-scale temporal interactions
-        \"\"\"
+        """
         # Fast -> Medium (bottom-up integration)
         fast_to_medium_signal = jnp.dot(fast_state, self.fast_to_medium.T)
         
@@ -326,7 +326,7 @@ class MultiScaleTemporalNetwork(eqx.Module):
     
     def __call__(self, inputs: jnp.ndarray, multi_scale_state: Dict[str, jnp.ndarray], 
                  dt: float = 0.1) -> Tuple[jnp.ndarray, Dict[str, jnp.ndarray]]:
-        \"\"\"Forward pass with multi-scale temporal processing.\"\"\"
+        """Forward pass with multi-scale temporal processing."""
         
         fast_state = multi_scale_state['fast']
         medium_state = multi_scale_state['medium']
@@ -371,7 +371,7 @@ class MultiScaleTemporalNetwork(eqx.Module):
         return output, new_state
     
     def init_state(self, batch_size: int) -> Dict[str, jnp.ndarray]:
-        \"\"\"Initialize multi-scale state.\"\"\"
+        """Initialize multi-scale state."""
         scale_size = self.hidden_size // self.num_scales
         
         return {
@@ -382,13 +382,13 @@ class MultiScaleTemporalNetwork(eqx.Module):
 
 
 class QuantumInspiredContinuousComputation(eqx.Module):
-    \"\"\"
+    """
     NOVEL RESEARCH CONTRIBUTION 3: Quantum-Inspired Continuous Computation
     
     This model incorporates quantum-inspired superposition and entanglement
     concepts into continuous-time neural computation, enabling parallel 
     processing of multiple computational pathways.
-    \"\"\"
+    """
     
     input_size: int
     hidden_size: int
@@ -447,10 +447,10 @@ class QuantumInspiredContinuousComputation(eqx.Module):
         self.b_out = jnp.zeros(output_size)
     
     def quantum_superposition_transform(self, classical_state: jnp.ndarray) -> jnp.ndarray:
-        \"\"\"
+        """
         NOVEL ALGORITHM: Quantum superposition transformation
         Maps classical state to quantum-inspired superposition state.
-        \"\"\"
+        """
         # Create superposition by linear combination of basis states
         superposition_components = jnp.dot(classical_state, self.superposition_weights.T)
         
@@ -465,9 +465,9 @@ class QuantumInspiredContinuousComputation(eqx.Module):
         return quantum_state_normalized
     
     def quantum_entanglement_coupling(self, quantum_state: jnp.ndarray) -> jnp.ndarray:
-        \"\"\"
+        """
         Apply quantum-inspired entanglement coupling between neurons.
-        \"\"\"
+        """
         # Extract real part for entanglement computation
         real_state = jnp.real(quantum_state)
         
@@ -480,9 +480,9 @@ class QuantumInspiredContinuousComputation(eqx.Module):
         return entangled_complex
     
     def quantum_measurement_collapse(self, quantum_state: jnp.ndarray) -> jnp.ndarray:
-        \"\"\"
+        """
         NOVEL ALGORITHM: Quantum measurement and collapse to classical state
-        \"\"\"
+        """
         # Compute measurement probabilities
         probabilities = jnp.abs(quantum_state)**2
         
@@ -496,9 +496,9 @@ class QuantumInspiredContinuousComputation(eqx.Module):
     
     def __call__(self, inputs: jnp.ndarray, classical_state: jnp.ndarray, 
                  dt: float = 0.1) -> Tuple[jnp.ndarray, jnp.ndarray]:
-        \"\"\"
+        """
         Forward pass with quantum-inspired continuous computation.
-        \"\"\"
+        """
         # Classical pathway
         classical_input = jnp.dot(inputs, self.W_classical.T)
         classical_dynamics = -classical_state + jnp.tanh(classical_input)
@@ -527,11 +527,11 @@ class QuantumInspiredContinuousComputation(eqx.Module):
         return output, new_classical_state
     
     def init_state(self, batch_size: int) -> jnp.ndarray:
-        \"\"\"Initialize classical state.\"\"\"
+        """Initialize classical state."""
         return jnp.zeros((batch_size, self.hidden_size))
     
     def get_quantum_coherence_measure(self, quantum_state: jnp.ndarray) -> float:
-        \"\"\"Measure quantum coherence in the system.\"\"\"
+        """Measure quantum coherence in the system."""
         # Compute off-diagonal elements of density matrix
         density_matrix = jnp.outer(quantum_state.conj(), quantum_state)
         off_diagonal = density_matrix - jnp.diag(jnp.diag(density_matrix))
@@ -542,11 +542,11 @@ class QuantumInspiredContinuousComputation(eqx.Module):
 
 # Research utility functions
 def compare_novel_algorithms(input_data: jnp.ndarray, sequence_length: int = 100) -> Dict[str, Any]:
-    \"\"\"
+    """
     Compare the novel algorithms against standard liquid neural networks.
-    \"\"\"
+    """
     if not HAS_JAX:
-        return {\"error\": \"JAX not available for comparison\"}
+        return {"error": "JAX not available for comparison"}
     
     key = random.PRNGKey(42)
     keys = random.split(key, 4)
@@ -570,20 +570,20 @@ def compare_novel_algorithms(input_data: jnp.ndarray, sequence_length: int = 100
     results = {}
     
     # Benchmark each model
-    for name, model in [(\"Standard Liquid\", standard_liquid), 
-                        (\"Meta-Adaptive\", meta_adaptive),
-                        (\"Multi-Scale\", multi_scale), 
-                        (\"Quantum-Inspired\", quantum_inspired)]:
+    for name, model in [("Standard Liquid", standard_liquid), 
+                        ("Meta-Adaptive", meta_adaptive),
+                        ("Multi-Scale", multi_scale), 
+                        ("Quantum-Inspired", quantum_inspired)]:
         
         start_time = time.time()
         
         try:
-            if name == \"Standard Liquid\":
+            if name == "Standard Liquid":
                 hidden = model.init_hidden_state(1)
                 for i in range(sequence_length):
                     output, hidden = model(input_data[i:i+1], hidden)
                     
-            elif name == \"Meta-Adaptive\":
+            elif name == "Meta-Adaptive":
                 hidden = jnp.zeros((1, hidden_size))
                 meta_state = {'enable_plasticity': False, 'reward': 0.0}
                 for i in range(sequence_length):
@@ -592,12 +592,12 @@ def compare_novel_algorithms(input_data: jnp.ndarray, sequence_length: int = 100
                         prediction_error=jnp.random.normal(keys[0])
                     )
                     
-            elif name == \"Multi-Scale\":
+            elif name == "Multi-Scale":
                 state = model.init_state(1)
                 for i in range(sequence_length):
                     output, state = model(input_data[i:i+1], state)
                     
-            elif name == \"Quantum-Inspired\":
+            elif name == "Quantum-Inspired":
                 classical_state = model.init_state(1)
                 for i in range(sequence_length):
                     output, classical_state = model(input_data[i:i+1], classical_state)
