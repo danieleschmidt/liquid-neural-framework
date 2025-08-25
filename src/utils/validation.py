@@ -5,8 +5,23 @@ This module provides comprehensive validation functions for liquid neural networ
 to ensure robustness and catch potential issues early.
 """
 
-import jax.numpy as jnp
-from jax import random
+try:
+    import jax.numpy as jnp
+    from jax import random
+    HAS_JAX = True
+except ImportError:
+    import numpy as jnp
+    HAS_JAX = False
+    # Create fallback for JAX random
+    class MockRandom:
+        @staticmethod
+        def PRNGKey(seed):
+            return seed
+        @staticmethod
+        def normal(key, shape):
+            np.random.seed(key if isinstance(key, int) else 42)
+            return np.random.normal(size=shape)
+    random = MockRandom()
 from typing import Union, Tuple, Optional, Dict, Any
 import warnings
 
@@ -246,28 +261,34 @@ def validate_training_parameters(
         validate_positive_scalar(gradient_clip, "gradient_clip", min_val=1e-6)
 
 
-def validate_prng_key(key: Optional[random.PRNGKey]) -> random.PRNGKey:
+def validate_prng_key(key: Optional[int]) -> int:
     """
     Validate and potentially generate PRNG key.
     
     Args:
-        key: JAX random key or None
+        key: Random seed or None
         
     Returns:
-        Valid PRNG key
+        Valid PRNG key/seed
         
     Raises:
         ValidationError: If key is invalid
     """
     if key is None:
-        return random.PRNGKey(0)
+        return 0
     
-    if not isinstance(key, jnp.ndarray) or key.shape != (2,) or key.dtype != jnp.uint32:
-        raise ValidationError(
-            f"PRNG key must be a JAX array with shape (2,) and dtype uint32, "
-            f"got shape {key.shape if hasattr(key, 'shape') else 'N/A'} "
-            f"and dtype {key.dtype if hasattr(key, 'dtype') else type(key)}"
-        )
+    if HAS_JAX:
+        # JAX validation
+        if not isinstance(key, jnp.ndarray) or key.shape != (2,) or key.dtype != jnp.uint32:
+            if isinstance(key, int):
+                return random.PRNGKey(key)
+            raise ValidationError(f"PRNG key invalid for JAX: {type(key)}")
+    else:
+        # NumPy validation - just needs to be an integer
+        if not isinstance(key, int):
+            if hasattr(key, '__int__'):
+                return int(key)
+            raise ValidationError(f"PRNG key must be integer for NumPy fallback: {type(key)}")
     
     return key
 
