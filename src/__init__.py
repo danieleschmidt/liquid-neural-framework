@@ -70,6 +70,40 @@ class _PlaceholderModel:
     def __init__(self, *args, **kwargs):
         raise ImportError("Dependencies not available. Install required packages.")
 
+# Ensure fallback availability
+try:
+    # Try to import JAX models first
+    if not _core_models:
+        raise ImportError("JAX models not available")
+except ImportError:
+    # Fallback to NumPy implementations
+    try:
+        from .models.numpy_fallback import (
+            LiquidNeuralNetwork, ContinuousTimeRNN, AdaptiveNeuron,
+            LiquidLayer, AdaptiveLiquidNetwork, LiquidNeuron,
+            ResonatorNeuron, NeuronNetwork, NeuralODEFunc,
+            GatedContinuousRNN, MultiScaleCTRNN
+        )
+        _core_models = {
+            'LiquidNeuralNetwork': LiquidNeuralNetwork,
+            'ContinuousTimeRNN': ContinuousTimeRNN,
+            'AdaptiveNeuron': AdaptiveNeuron,
+            'LiquidLayer': LiquidLayer,
+            'AdaptiveLiquidNetwork': AdaptiveLiquidNetwork,
+            'LiquidNeuron': LiquidNeuron,
+            'ResonatorNeuron': ResonatorNeuron,
+            'NeuronNetwork': NeuronNetwork,
+            'NeuralODEFunc': NeuralODEFunc,
+            'GatedContinuousRNN': GatedContinuousRNN,
+            'MultiScaleCTRNN': MultiScaleCTRNN
+        }
+    except ImportError:
+        pass
+
+# Update exports with fallbacks
+if _core_models:
+    locals().update(_core_models)
+
 # Training algorithms - with fallbacks
 _algorithms = {}
 try:

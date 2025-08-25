@@ -1,0 +1,188 @@
+{
+  "timestamp": 1756163145.6115613,
+  "execution_time": 0.044816017150878906,
+  "gate_status": "PASSED",
+  "gates_passed": 3,
+  "total_gates": 3,
+  "scores": {
+    "security": 113.0,
+    "quality": 83.66477272727272,
+    "dependency": 85.0,
+    "overall": 95.79943181818182
+  },
+  "thresholds": {
+    "security": 75.0,
+    "quality": 70.0,
+    "overall": 75.0
+  },
+  "detailed_reports": {
+    "security": {
+      "timestamp": 1756163145.5667346,
+      "total_files_scanned": 49,
+      "security_issues": [],
+      "best_practices": {
+        "input_validation": [
+          "src/experiments/statistical_validation.py",
+          "src/utils/compliance.py",
+          "src/utils/data_utils.py",
+          "src/utils/error_handling.py",
+          "src/utils/global_deployment.py",
+          "src/utils/model_validation.py",
+          "src/utils/robust_validation.py",
+          "src/utils/security.py",
+          "src/utils/security_measures.py",
+          "src/utils/validation.py",
+          "src/models/liquid_neural_network.py",
+          "src/models/optimized_models.py"
+        ],
+        "error_handling": [
+          "src/research/novel_algorithms.py",
+          "src/utils/compliance.py",
+          "src/utils/internationalization.py"
+        ],
+        "secure_defaults": [
+          "src/research/evolutionary_intelligence.py",
+          "src/research/novel_algorithms.py",
+          "src/utils/data_utils.py",
+          "src/utils/optimization.py",
+          "src/utils/robust_validation.py",
+          "src/utils/security.py",
+          "src/utils/security_measures.py",
+          "src/utils/validation.py",
+          "src/models/liquid_neural_network.py",
+          "src/models/numpy_fallback.py",
+          "src/models/optimized_models.py"
+        ],
+        "logging_security": [
+          "src/__init__.py",
+          "src/experiments/research_benchmarks.py",
+          "src/experiments/statistical_validation.py",
+          "src/research/benchmarking_suite.py",
+          "src/research/evolutionary_intelligence.py",
+          "src/utils/caching.py",
+          "src/utils/data_utils.py",
+          "src/utils/enhanced_logging.py",
+          "src/utils/error_recovery.py",
+          "src/utils/internationalization.py",
+          "src/utils/logging.py",
+          "src/utils/metrics.py",
+          "src/utils/model_logger.py",
+          "src/utils/model_validation.py",
+          "src/utils/monitoring.py",
+          "src/utils/multi_region.py",
+          "src/utils/optimization.py",
+          "src/utils/parallel.py",
+          "src/utils/performance_optimization.py",
+          "src/utils/robust_validation.py",
+          "src/utils/scaling_infrastructure.py",
+          "src/utils/security.py",
+          "src/utils/security_measures.py",
+          "src/utils/validation.py",
+          "src/utils/visualization.py",
+          "src/models/liquid_neural_network.py"
+        ]
+      },
+      "sensitive_patterns": [],
+      "overall_security_score": 113.0
+    },
+    "quality": {
+      "timestamp": 1756163145.5904133,
+      "code_complexity": {
+        "files_analyzed": 49,
+        "avg_complexity": 0
+      },
+      "documentation": {
+        "docstring_coverage": 99.6590909090909,
+        "files_documented": [
+          "src/__init__.py",
+          "src/algorithms/continuous_learning.py",
+          "src/algorithms/optimization.py",
+          "src/algorithms/training.py",
+          "src/experiments/benchmark_suite.py",
+          "src/experiments/research_benchmarks.py",
+          "src/experiments/simple_benchmarks.py",
+          "src/experiments/statistical_validation.py",
+          "src/experiments/synthetic_tasks.py",
+          "src/experiments/validation_experiments.py",
+          "src/research/__init__.py",
+          "src/research/advanced_training.py",
+          "src/research/benchmarking_suite.py",
+          "src/research/evolutionary_intelligence.py",
+          "src/research/novel_algorithms.py",
+          "src/utils/caching.py",
+          "src/utils/compliance.py",
+          "src/utils/data_utils.py",
+          "src/utils/enhanced_logging.py",
+          "src/utils/error_handling.py",
+          "src/utils/error_recovery.py",
+          "src/utils/global_deployment.py",
+          "src/utils/internationalization.py",
+          "src/utils/logging.py",
+          "src/utils/metrics.py",
+          "src/utils/model_logger.py",
+          "src/utils/model_validation.py",
+          "src/utils/monitoring.py",
+          "src/utils/multi_region.py",
+          "src/utils/optimization.py",
+          "src/utils/parallel.py",
+          "src/utils/performance_enhancements.py",
+          "src/utils/performance_optimization.py",
+          "src/utils/performance_optimizer.py",
+          "src/utils/robust_validation.py",
+          "src/utils/scaling_infrastructure.py",
+          "src/utils/security.py",
+          "src/utils/security_measures.py",
+          "src/utils/validation.py",
+          "src/utils/visualization.py",
+          "src/models/liquid_neural_network.py",
+          "src/models/__init__.py",
+          "src/models/continuous_time_rnn.py",
+          "src/models/adaptive_neuron.py",
+          "src/models/numpy_fallback.py",
+          "src/models/optimized_models.py"
+        ]
+      },
+      "error_handling": {
+        "try_except_blocks": 127,
+        "proper_exceptions": 39
+      },
+      "code_organization": {
+        "module_structure": [
+          "algorithms",
+          "experiments",
+          "research",
+          "utils",
+          "models"
+        ],
+        "import_organization": "good"
+      },
+      "testing_coverage": {
+        "test_files_found": 30,
+        "estimated_coverage": 85
+      },
+      "overall_quality_score": 83.66477272727272
+    },
+    "dependency": {
+      "timestamp": 1756163145.611405,
+      "requirements_found": true,
+      "total_dependencies": 23,
+      "known_vulnerabilities": [],
+      "outdated_packages": [],
+      "security_recommendations": [
+        "Keep JAX updated to latest stable version for security patches",
+        "Use virtual environments to isolate dependencies",
+        "Regularly audit dependencies for known vulnerabilities",
+        "Pin dependency versions for reproducible builds",
+        "Avoid installing packages from untrusted sources"
+      ],
+      "dependency_security_score": 85.0
+    }
+  },
+  "recommendations": [
+    "\ud83d\udd04 Set up automated security scanning in CI/CD pipeline",
+    "\ud83d\udcca Implement code quality metrics monitoring",
+    "\ud83d\ude80 Add performance benchmarking to quality gates",
+    "\ud83d\udd0d Regular security audits and penetration testing",
+    "\ud83d\udccb Document security procedures and incident response"
+  ]
+}
