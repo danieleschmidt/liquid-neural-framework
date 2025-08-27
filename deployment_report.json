@@ -1,0 +1,117 @@
+{
+  "deployment_info": {
+    "model_name": "liquid-neural-classifier",
+    "version": "1.0.0",
+    "deployment_time": 1756258727.596965,
+    "config": {
+      "model_name": "liquid-neural-classifier",
+      "version": "1.0.0",
+      "max_batch_size": 16,
+      "timeout_ms": 1000,
+      "max_memory_mb": 512,
+      "auto_scale": true,
+      "min_replicas": 1,
+      "max_replicas": 5,
+      "target_cpu_percent": 70,
+      "health_check_interval": 10,
+      "logging_level": "INFO",
+      "enable_monitoring": true
+    }
+  },
+  "current_status": {
+    "config": {
+      "model_name": "liquid-neural-classifier",
+      "version": "1.0.0",
+      "max_batch_size": 16,
+      "timeout_ms": 1000,
+      "max_memory_mb": 512,
+      "auto_scale": true,
+      "min_replicas": 1,
+      "max_replicas": 5,
+      "target_cpu_percent": 70,
+      "health_check_interval": 10,
+      "logging_level": "INFO",
+      "enable_monitoring": true
+    },
+    "timestamp": 1756258727.5969954,
+    "monitoring_active": true,
+    "model_health": {
+      "status": "DEGRADED",
+      "uptime_seconds": 0.0,
+      "total_predictions": 23,
+      "average_latency_ms": 0.11887757674507472,
+      "error_rate": 1.173913043478261,
+      "memory_usage_mb": 101.5,
+      "cache_size": 3,
+      "last_prediction": 1756258727.43477
+    },
+    "scaling": {
+      "current_replicas": 1,
+      "min_replicas": 1,
+      "max_replicas": 5,
+      "last_scale_time": 0
+    },
+    "metrics": {
+      "window_minutes": 60,
+      "sample_count": 23,
+      "latency": {
+        "mean": 0.11887757674507472,
+        "median": 0.11730194091796875,
+        "p95": 0.21295547485351554,
+        "p99": 0.25571823120117193,
+        "min": 0.05745887756347656,
+        "max": 0.2663135528564453
+      },
+      "throughput": {
+        "mean": 1000.0,
+        "median": 1000.0,
+        "min": 1000.0,
+        "max": 1000.0
+      },
+      "accuracy": {
+        "mean": 0.9731479207926145,
+        "std": 0.015446804827487445,
+        "min": 0.9517971136898371
+      },
+      "memory_mb": {
+        "mean": 101.32608695652173,
+        "max": 101.5
+      },
+      "error_rate": {
+        "mean": 0.5989593536016339,
+        "max": 1.0625
+      }
+    }
+  },
+  "performance_summary": {
+    "window_minutes": 1440,
+    "sample_count": 23,
+    "latency": {
+      "mean": 0.11887757674507472,
+      "median": 0.11730194091796875,
+      "p95": 0.21295547485351554,
+      "p99": 0.25571823120117193,
+      "min": 0.05745887756347656,
+      "max": 0.2663135528564453
+    },
+    "throughput": {
+      "mean": 1000.0,
+      "median": 1000.0,
+      "min": 1000.0,
+      "max": 1000.0
+    },
+    "accuracy": {
+      "mean": 0.9731479207926145,
+      "std": 0.015446804827487445,
+      "min": 0.9517971136898371
+    },
+    "memory_mb": {
+      "mean": 101.32608695652173,
+      "max": 101.5
+    },
+    "error_rate": {
+      "mean": 0.5989593536016339,
+      "max": 1.0625
+    }
+  }
+}

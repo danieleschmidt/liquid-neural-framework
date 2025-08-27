@@ -1,0 +1,173 @@
+{
+  "overall_score": 83.33333333333333,
+  "quality_grade": "A (Very Good)",
+  "component_scores": {
+    "imports": 66.66666666666666,
+    "functionality": 100,
+    "performance": 100,
+    "stability": 100.0,
+    "research": 50
+  },
+  "validation_timestamp": 1756258832.623824,
+  "detailed_results": {
+    "imports": {
+      "core_framework": true,
+      "models": true,
+      "algorithms": false,
+      "experiments": false,
+      "utils": true,
+      "research": true
+    },
+    "models": {
+      "liquid_nn": {
+        "success": true,
+        "output_shape": [
+          3,
+          2
+        ],
+        "hidden_shape": [
+          3,
+          32
+        ],
+        "inference_time_ms": 0.19073486328125,
+        "output_range": [
+          -0.051589153107125696,
+          0.34259404251095094
+        ],
+        "hidden_activity": 0.11946861279108976
+      },
+      "ctrnn": {
+        "success": true,
+        "output_shape": [
+          3,
+          2
+        ],
+        "hidden_shape": [
+          3,
+          32
+        ],
+        "inference_time_ms": 0.06008148193359375,
+        "output_range": [
+          -0.008932576176665118,
+          0.002518092912323329
+        ],
+        "temporal_dynamics": true
+      },
+      "adaptive_neuron": {
+        "success": true,
+        "diagnostics_keys": [
+          "spike",
+          "voltage",
+          "threshold",
+          "adaptation",
+          "output"
+        ],
+        "inference_time_ms": 0.08225440979003906,
+        "output_value": -0.0996997635486526,
+        "spike_detected": 0.0
+      }
+    },
+    "temporal": {
+      "temporal_analysis": {
+        "sequence_length": 30,
+        "output_variance": 0.09819844939552708,
+        "output_autocorrelation": 0.8661881035907664,
+        "hidden_variance": 0.13436238204819806,
+        "memory_persistence": -0.5234652141188564,
+        "temporal_consistency": "True",
+        "memory_capability": "True"
+      }
+    },
+    "performance": {
+      "small": {
+        "config": {
+          "name": "Small",
+          "input_size": 10,
+          "liquid_size": 32,
+          "output_size": 1,
+          "batch_size": 5
+        },
+        "avg_inference_time_ms": 0.027904510498046875,
+        "throughput_samples_per_sec": 179182.5017088175,
+        "total_time_sec": 0.0027904510498046875,
+        "memory_efficient": true,
+        "high_throughput": true
+      },
+      "medium": {
+        "config": {
+          "name": "Medium",
+          "input_size": 20,
+          "liquid_size": 64,
+          "output_size": 3,
+          "batch_size": 10
+        },
+        "avg_inference_time_ms": 0.040612220764160156,
+        "throughput_samples_per_sec": 246231.302101679,
+        "total_time_sec": 0.004061222076416016,
+        "memory_efficient": true,
+        "high_throughput": true
+      },
+      "large": {
+        "config": {
+          "name": "Large",
+          "input_size": 50,
+          "liquid_size": 128,
+          "output_size": 5,
+          "batch_size": 20
+        },
+        "avg_inference_time_ms": 0.10650157928466797,
+        "throughput_samples_per_sec": 187790.64248936647,
+        "total_time_sec": 0.010650157928466797,
+        "memory_efficient": true,
+        "high_throughput": true
+      },
+      "overall_performance": {
+        "all_memory_efficient": true,
+        "all_high_throughput": true,
+        "performance_grade": "A"
+      }
+    },
+    "research": {
+      "error": "name 'Callable' is not defined"
+    },
+    "stability": {
+      "stability_tests": {
+        "Zero inputs": {
+          "stable": true,
+          "max_output": 0.12354547692586554,
+          "max_hidden": 0.2966587690946773
+        },
+        "Large inputs": {
+          "stable": true,
+          "max_output": 2.6765606275763605,
+          "max_hidden": 1.0
+        },
+        "Small inputs": {
+          "stable": true,
+          "max_output": 0.12338180563481063,
+          "max_hidden": 0.29736369209832103
+        },
+        "Mixed signs": {
+          "stable": true,
+          "max_output": 1.8280774424287918,
+          "max_hidden": 0.9912148192398368
+        },
+        "Extreme values": {
+          "stable": true,
+          "max_output": 2.452981333904572,
+          "max_hidden": 1.0
+        }
+      },
+      "overall_stability": {
+        "stable_conditions": 5,
+        "total_conditions": 5,
+        "stability_rate": 1.0,
+        "highly_stable": true
+      }
+    }
+  },
+  "recommendations": [
+    "Fix import issues for full framework access"
+  ],
+  "production_ready": "True"
+}
