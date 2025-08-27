@@ -23,7 +23,7 @@ import time
 import warnings
 
 
-class MetaAdaptiveLiquidNetwork(eqx.Module):
+class MetaAdaptiveLiquidNetwork(eqx.Module if HAS_JAX else object):
     """
     NOVEL RESEARCH CONTRIBUTION 1: Meta-Adaptive Liquid Neural Network
     
@@ -62,11 +62,13 @@ class MetaAdaptiveLiquidNetwork(eqx.Module):
         output_size: int,
         meta_learning_rate: float = 0.01,
         plasticity_strength: float = 0.1,
-        key: Optional[jax.random.PRNGKey] = None
+        key: Optional[Any] = None
     ):
         if not HAS_JAX:
             raise ImportError("JAX required for meta-adaptive networks")
             
+        if not HAS_JAX:
+            raise ImportError("JAX required for meta-adaptive networks")
         if key is None:
             key = random.PRNGKey(42)
             
@@ -201,7 +203,7 @@ class MetaAdaptiveLiquidNetwork(eqx.Module):
         return output, new_hidden_state, new_meta_state
 
 
-class MultiScaleTemporalNetwork(eqx.Module):
+class MultiScaleTemporalNetwork(eqx.Module if HAS_JAX else object):
     """
     NOVEL RESEARCH CONTRIBUTION 2: Multi-Scale Temporal Dynamics Network
     
@@ -238,11 +240,13 @@ class MultiScaleTemporalNetwork(eqx.Module):
         hidden_size: int,
         output_size: int,
         num_scales: int = 3,
-        key: Optional[jax.random.PRNGKey] = None
+        key: Optional[Any] = None
     ):
         if not HAS_JAX:
             raise ImportError("JAX required for multi-scale networks")
             
+        if not HAS_JAX:
+            raise ImportError("JAX required for meta-adaptive networks")
         if key is None:
             key = random.PRNGKey(42)
             
@@ -381,7 +385,7 @@ class MultiScaleTemporalNetwork(eqx.Module):
         }
 
 
-class QuantumInspiredContinuousComputation(eqx.Module):
+class QuantumInspiredContinuousComputation(eqx.Module if HAS_JAX else object):
     """
     NOVEL RESEARCH CONTRIBUTION 3: Quantum-Inspired Continuous Computation
     
@@ -413,11 +417,13 @@ class QuantumInspiredContinuousComputation(eqx.Module):
         hidden_size: int,
         output_size: int,
         quantum_dimension: int = 4,
-        key: Optional[jax.random.PRNGKey] = None
+        key: Optional[Any] = None
     ):
         if not HAS_JAX:
             raise ImportError("JAX required for quantum-inspired computation")
             
+        if not HAS_JAX:
+            raise ImportError("JAX required for meta-adaptive networks")
         if key is None:
             key = random.PRNGKey(42)
             
