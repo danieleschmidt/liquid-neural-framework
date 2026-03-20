@@ -1,132 +1,67 @@
-# liquid neural framework
+# Liquid Neural Framework
 
-> Continuous-time adaptive neural networks with JAX for robotics and control
+Continuous-time adaptive neural networks for robotics and control, implemented in Python/NumPy.
 
-## 🎯 Research Mission
+## Overview
 
-This repository represents cutting-edge research at the intersection of Liquid Neural Networks and Continuous-Time Models and Adaptive Computation and Robotics. Our goal is to push the boundaries of what's possible in this domain while maintaining rigorous scientific standards and reproducibility.
+This framework implements **Liquid Time-Constant (LTC) networks** — a class of neural ODEs where each neuron has a learned time constant governing the speed of its dynamics. LTC networks are particularly well-suited for control problems and time-series prediction with irregular timing.
 
-## 🧬 Key Research Areas
+### Key Concepts
 
-- Liquid Neural Networks
-- Continuous-Time Models
-- Adaptive Computation
-- Robotics
-
-## 🛠️ Technology Stack
-
-- JAX
-- PyTorch
-- Julia
-- DifferentialEquations.jl
-
-## 📁 Repository Structure
+The core ODE for each LTC cell:
 
 ```
-liquid-neural-framework/
-├── src/                 # Core implementation
-│   ├── models/         # Model architectures
-│   ├── algorithms/     # Novel algorithms
-│   ├── utils/          # Utility functions
-│   └── experiments/    # Experimental code
-├── tests/              # Unit and integration tests
-├── benchmarks/         # Performance benchmarks
-├── docs/               # Documentation and papers
-│   ├── literature/     # Literature review
-│   ├── theory/         # Theoretical foundations
-│   └── results/        # Experimental results
-├── examples/           # Usage examples
-├── notebooks/          # Jupyter notebooks
-└── scripts/            # Training and evaluation scripts
+dh/dt = (-h + f(x, h) * A) / tau
 ```
 
-## 🚀 Getting Started
+where:
+- `h` — hidden state
+- `tau` — learned time constants (always positive)
+- `A` — attractor bias
+- `f(x, h) = sigmoid(W_in @ x + W_rec @ h + bias)` — gating function
 
-### Prerequisites
+## Components
 
-```bash
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+| Module | Description |
+|--------|-------------|
+| `cells.py` | `LiquidTimeConstantCell` — single ODE-inspired neuron layer |
+| `network.py` | `LiquidNetwork` — stacked cells with linear output |
+| `ode_solver.py` | Euler and RK4 integrators |
+| `tasks.py` | `PendulumTask` + synthetic datasets |
+| `trainer.py` | `SimpleTrainer` with finite-difference gradients |
+| `visualization.py` | Hidden state and trajectory plots |
 
-# Install dependencies
-pip install -r requirements.txt
-pip install -e .  # Install package in development mode
-```
-
-### Quick Start
+## Quick Start
 
 ```python
-# Example usage will be added as research progresses
-import liquid_neural_framework
+from liquid_neural import LiquidNetwork, SimpleTrainer, PendulumTask
 
-# Initialize model
-model = liquid_neural_framework.Model()
+# Generate pendulum data
+task = PendulumTask(dt=0.05, n_steps=100)
+X, y = task.generate_trajectory(theta0=0.5)
 
-# Run inference
-results = model.forward(data)
+# Build and train network
+net = LiquidNetwork(input_dim=2, hidden_dims=[16, 8], output_dim=2)
+trainer = SimpleTrainer(net, lr=1e-3)
+losses = trainer.fit(X, y, epochs=20)
+
+# Predict
+outputs = net.predict(X)
 ```
 
-## 🧪 Research Progress
+## Running Tests
 
-### Phase 1: Foundation (Current)
-- [ ] Literature review and gap analysis
-- [ ] Baseline implementation
-- [ ] Initial benchmarking setup
-- [ ] Core algorithm design
+```bash
+~/anaconda3/bin/python3 -m pytest tests/ -v
+```
 
-### Phase 2: Innovation
-- [ ] Novel approach development
-- [ ] Comparative analysis
-- [ ] Performance optimization
-- [ ] Ablation studies
+## Running the Demo
 
-### Phase 3: Validation
-- [ ] Comprehensive benchmarking
-- [ ] Statistical significance testing
-- [ ] Reproducibility verification
-- [ ] Edge case analysis
+```bash
+~/anaconda3/bin/python3 examples/pendulum_demo.py
+```
 
-### Phase 4: Publication
-- [ ] Paper draft preparation
-- [ ] Code cleanup and documentation
-- [ ] Public dataset preparation
-- [ ] Conference/journal submission
+## References
 
-## 📊 Benchmarks
-
-Benchmark results will be continuously updated as research progresses.
-
-| Method | Metric 1 | Metric 2 | Metric 3 |
-|--------|----------|----------|----------|
-| Baseline | TBD | TBD | TBD |
-| Our Method | TBD | TBD | TBD |
-
-## 📖 Publications
-
-Papers and preprints related to this research:
-
-- [Coming Soon] "liquid neural framework: A Novel Approach" - *Target: NeurIPS 2025*
-
-## 🤝 Contributing
-
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-## 📄 License
-
-This project is licensed under the MIT License - see [LICENSE](LICENSE) for details.
-
-## 🙏 Acknowledgments
-
-- Inspired by recent advances in Liquid Neural Networks
-- Built upon foundational work in the field
-
-## 📞 Contact
-
-- **Principal Investigator**: Daniel Schmidt
-- **Repository**: [github.com/danieleschmidt/liquid-neural-framework](https://github.com/danieleschmidt/liquid-neural-framework)
-- **Issues**: [GitHub Issues](https://github.com/danieleschmidt/liquid-neural-framework/issues)
-
----
-
-*This is an active research project. Results and approaches are subject to change as we explore this frontier.*
+- Hasani et al., "Liquid Time-constant Networks" (AAAI 2021)
+- Chen et al., "Neural Ordinary Differential Equations" (NeurIPS 2018)
